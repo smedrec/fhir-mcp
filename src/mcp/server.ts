@@ -10,12 +10,10 @@ class FHIRMCPServer {
   private server: McpServer;
 
   constructor() {
-    this.server = new McpServer(
-      {
-        name: "fhir-mcp-server",
-        version: "0.1.0",
-      },
-    );
+    this.server = new McpServer({
+      name: "fhir-mcp-server",
+      version: "0.1.0",
+    });
 
     this.setupToolHandlers();
 
@@ -34,13 +32,27 @@ class FHIRMCPServer {
   }
 
   private setupToolHandlers() {
-    fhirResourceTools.forEach((tool) => { // Changed map to forEach as we are not returning a new array
-      this.server.registerTool(tool.name,
+    fhirResourceTools.forEach((tool) => {
+      this.server.registerTool(
+        tool.name,
         {
           description: tool.description,
-          inputSchema: tool.inputSchema.shape // Use .shape for Zod objects
+          inputSchema: tool.inputSchema,
         },
-        tool.handler,
+        async (args: any, extra: any) => {
+          // Call the original handler and adapt the result to MCP SDK format
+          const result = await tool.handler(args, extra);
+          // Ensure each content item has the required structure
+          return {
+            ...result,
+            content: (result.content || []).map((item: any) => ({
+              ...item,
+              type: item.type || "text",
+              text: item.text || "",
+              // Add other required properties or adapt as needed
+            })),
+          };
+        }
       );
     });
 
@@ -55,5 +67,4 @@ class FHIRMCPServer {
   }
 }
 
-export { FHIRMCPServer }
-
+export { FHIRMCPServer };

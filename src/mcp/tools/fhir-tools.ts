@@ -16,19 +16,21 @@ const fhirClient = axios.create({
 // Example: fhirClient.defaults.headers.common['Authorization'] = `Bearer ${process.env.FHIR_ACCESS_TOKEN}`;
 
 const defaultPrincipalId = 'anonymous'
-const defaultRoles = ['anonymous']
+//const defaultRoles = ['anonymous']
 
 export const fhirResourceReadTool = {
   name: 'fhirResourceRead',
   description: 'Reads a FHIR resource by ID.',
-  inputSchema: z.object({
+  inputSchema: {
     resourceType: z.string().describe('The FHIR resource type, ex: Patient, Organization, Practitioner'),
     id: z.string().describe('The resource ID')
-  }),
-  async handler(params: { resourceType: string, id: string }, extra: any) {
+  },
+  handler: async (
+    { resourceType, id }: { resourceType: string; id: string },
+    extra: any
+  ) => {
     const toolName = 'fhirResourceRead'
-    const resourceType = params.resourceType
-    const resourceId = params.id;
+    const resourceId = id;
     const principalId = defaultPrincipalId; // Or get from actual session/context
 
     try {
@@ -39,7 +41,7 @@ export const fhirResourceReadTool = {
         resourceType,
         resourceId,
         outcome: 'success', // Assuming success until an error occurs
-        details: { params }
+        //details: { params }
       });
 
       const response = await fhirClient.get(`/${resourceType}/${resourceId}`);
@@ -73,14 +75,15 @@ export const fhirResourceReadTool = {
 export const fhirResourceSearchTool = {
   name: 'fhirResourceSearch',
   description: 'Search FHIR resources by fhir standard parameters.',
-  inputSchema: z.object({
+  inputSchema: {
     resourceType: z.string().describe('The FHIR resource type, ex: Patient, Organization, Practitioner'),
     searchParams: z.record(z.string()).describe('A record of search parameters, e.g., {"name": "John Doe", "_count": "10"}')
-  }),
-  async handler(params: { resourceType: string, searchParams: Record<string, string> }, extra: any) {
+  },
+  handler: async (
+    { resourceType, searchParams }: { resourceType: string; searchParams: Record<string, string> },
+    extra: any
+  ) => {
     const toolName = 'fhirResourceSearch'; // Corrected tool name
-    const resourceType = params.resourceType;
-    const searchParams = params.searchParams;
     const principalId = defaultPrincipalId; // Or get from actual session/context
 
     try {
@@ -89,7 +92,7 @@ export const fhirResourceSearchTool = {
         action: toolName,
         resourceType,
         outcome: 'success', // Assuming success
-        details: { params }
+        details: { searchParams }
       });
 
       const response = await fhirClient.get(`/${resourceType}`, { params: searchParams });
@@ -103,7 +106,7 @@ export const fhirResourceSearchTool = {
         action: toolName,
         resourceType,
         outcome: 'failure',
-        details: { params, error: error.response?.data || error.message }
+        details: { searchParams, error: error.response?.data || error.message }
       });
       throw new Error(`Failed to search FHIR resources ${resourceType}: ${error.message}`);
     }
@@ -113,14 +116,15 @@ export const fhirResourceSearchTool = {
 export const fhirResourceCreateTool = {
   name: 'fhirResourceCreate',
   description: 'Create FHIR resources.',
-  inputSchema: z.object({
+  inputSchema: {
     resourceType: z.string().describe('The FHIR resource type, ex: Patient, Organization, Practitioner'),
     resource: z.unknown()
-  }),
-  async handler(params: { resourceType: string, resource: any }, extra: any) {
+  },
+  handler: async (
+    { resourceType, resource }: { resourceType: string; resource: any },
+    extra: any
+  ) => {
     const toolName = 'fhirResourceCreate';
-    const resourceType = params.resourceType;
-    const resource = params.resource;
     const principalId = defaultPrincipalId;
 
     if (resource.resourceType && resource.resourceType !== resourceType) {
@@ -137,7 +141,7 @@ export const fhirResourceCreateTool = {
         action: toolName,
         resourceType,
         outcome: 'success', // Assuming success
-        details: { resourceType, resource } // Be cautious about logging entire resource if sensitive
+        //details: { resourceType, resource } // Be cautious about logging entire resource if sensitive
       });
 
       const response = await fhirClient.post(`/${resourceType}`, resource);
@@ -162,16 +166,16 @@ export const fhirResourceCreateTool = {
 export const fhirResourceUpdateTool = {
   name: 'fhirResourceUpdate',
   description: 'Update FHIR resources.',
-  inputSchema: z.object({
+  inputSchema: {
     resourceType: z.string().describe('The FHIR resource type, ex: Patient, Organization, Practitioner'),
     id: z.string().describe('The ID of the resource to update'),
     resource: z.unknown().describe('The FHIR resource content to update. Must contain an `id` matching the URL.')
-  }),
-  async handler(params: { resourceType: string, id: string, resource: any }, extra: any) {
+  },
+  handler: async (
+    { resourceType, id, resource }: { resourceType: string; id: string; resource: any },
+    extra: any
+  ) => {
     const toolName = 'fhirResourceUpdate';
-    const resourceType = params.resourceType;
-    const id = params.id;
-    const resource = params.resource;
     const principalId = defaultPrincipalId;
 
     if (!resource.id) {
@@ -221,14 +225,15 @@ export const fhirResourceUpdateTool = {
 export const fhirResourceDeleteTool = {
   name: 'fhirResourceDelete',
   description: 'Delete FHIR resources.',
-  inputSchema: z.object({
+  inputSchema: {
     resourceType: z.string().describe('The FHIR resource type, ex: Patient, Organization, Practitioner'),
     id: z.string().describe('The resource ID')
-  }),
-  async handler(params: { resourceType: string, id: string }, extra: any) {
+  },
+  handler: async (
+    { resourceType, id }: { resourceType: string; id: string },
+    extra: any
+  ) => {
     const toolName = 'fhirResourceDelete';
-    const resourceType = params.resourceType;
-    const id = params.id;
     const principalId = defaultPrincipalId;
 
     try {
