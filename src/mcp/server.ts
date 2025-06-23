@@ -4,7 +4,7 @@ import {
   ResourceTemplate,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { fhirResourceTools } from "./tools/fhir-tools";
+import { fhirResourceTools } from "./tools/fhir-tools.js";
 
 class FHIRMCPServer {
   private server: McpServer;
@@ -44,7 +44,6 @@ class FHIRMCPServer {
           const result = await tool.handler(args, extra);
           // Ensure each content item has the required structure
           return {
-            ...result,
             content: (result.content || []).map((item: any) => ({
               ...item,
               type: item.type || "text",

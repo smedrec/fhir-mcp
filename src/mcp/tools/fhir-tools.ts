@@ -1,6 +1,6 @@
-import { logAuditEvent } from "../../lib/audit"
+import { logAuditEvent } from "../../lib/audit.js"
 import axios from 'axios';
-import { fhirServerBaseUrl } from '../../config';
+import { fhirServerBaseUrl } from '../../config.js';
 import z from "zod";
 
 // Create an axios instance for FHIR requests
