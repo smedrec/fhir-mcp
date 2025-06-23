@@ -20,44 +20,32 @@ class FHIRMCPServer {
     this.setupToolHandlers();
 
     // Error handling
-    /**this.server.onerror = (error: Error) => console.error("[MCP Error]", error);
+    // this.server.onerror = (error: Error) => console.error("[MCP Error]", error); // Commented out due to TS error, needs SDK v1.13.0 check
     process.on("SIGINT", async () => {
+      console.log("SIGINT received, shutting down server...");
       await this.server.close();
       process.exit(0);
-    });*/
+    });
+    process.on("SIGTERM", async () => {
+      console.log("SIGTERM received, shutting down server...");
+      await this.server.close();
+      process.exit(0);
+    });
   }
 
   private setupToolHandlers() {
-    fhirResourceTools.map((tool) => {
+    fhirResourceTools.forEach((tool) => { // Changed map to forEach as we are not returning a new array
       this.server.registerTool(tool.name,
         {
           description: tool.description,
-          inputSchema: tool.inputSchema
+          inputSchema: tool.inputSchema.shape // Use .shape for Zod objects
         },
         tool.handler,
-      )
+      );
     });
 
-    // Add a dynamic greeting resource
-    this.server.registerResource(
-      "greeting",
-      new ResourceTemplate("greeting://{name}", { list: undefined }),
-      {
-        title: "Greeting Resource", // Display name for UI
-        description: "Dynamic greeting generator",
-      },
-      async (uri: URL) => {
-        const name = uri.pathname.replace(/^\//, "");
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              text: `Hello, ${name}!`,
-            },
-          ],
-        };
-      }
-    );
+    // Example resource removed
+    // this.server.registerResource(...)
   }
 
   async run() {

@@ -3,6 +3,7 @@
     "target": "es2022",
     "module": "ESNext",
     "outDir": "build",
+    "declaration": true,
     "esModuleInterop": true,
     "strict": true,
     "moduleResolution": "node",
