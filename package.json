@@ -1,0 +1,19 @@
+{
+  "name": "fhir-mcp-server",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "inspector": "npx @modelcontextprotocol/inspector node build/index.js",
+    "start": "node build/index.js"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "@types/node": "^24.0.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "zod": "^3.25.67"
+  }
+}

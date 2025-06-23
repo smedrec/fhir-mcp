@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.secret
+*.env
+
+# Build Outputs
+out/
+dist
+
+# Misc
+.DS_Store
+*.pem
+
+# Log files
+*.log
