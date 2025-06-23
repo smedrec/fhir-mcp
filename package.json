@@ -1,19 +1,58 @@
 {
   "name": "fhir-mcp-server",
   "version": "0.1.0",
+  "description": "MCP Server for securely accessing FHIR-compatible health data",
   "type": "module",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "bin": {
+    "fhir-mcp-server": "build/index.js"
+  },
+  "files": [
+    "build/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "prepublishOnly": "npm run build",
     "inspector": "npx @modelcontextprotocol/inspector node build/index.js",
     "start": "node build/index.js"
   },
+  "keywords": [
+    "fhir",
+    "mcp",
+    "healthcare",
+    "api",
+    "server",
+    "model-context-protocol"
+  ],
+  "author": "Your Name or Org <your.email@example.com>",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/fhir-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/fhir-mcp-server/issues"
+  },
+  "homepage": "https://github.com/your-username/fhir-mcp-server#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.13.0",
+    "@types/axios": "^0.9.36",
     "@types/node": "^24.0.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "axios": "^1.10.0",
     "zod": "^3.25.67"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
