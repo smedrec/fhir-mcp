@@ -142,9 +142,8 @@ Once connected to the server (e.g., via MCP Inspector), the following tools will
     *   `src/lib/audit.ts`: Basic audit logging.
     *   `src/config.ts`: Configuration for FHIR base URL.
 *   **Building**: `npm run build`
-*   **Linting/Formatting**: Consider adding ESLint/Prettier for code consistency.
+*   **Linting/Formatting**: ESLint/Prettier for code consistency.
 
 ## License
 
-See the `LICENSE` file. The current `LICENSE` file is a generic one from the project template. **You should replace its contents with an appropriate open-source license (e.g., MIT, Apache 2.0) or your desired proprietary license.**
-Make sure the `license` field in `package.json` (e.g., "MIT", "Apache-2.0", or "SEE LICENSE IN LICENSE") accurately reflects the chosen license. It's currently set to "SEE LICENSE IN LICENSE".
+MIT License - see LICENSE for details.

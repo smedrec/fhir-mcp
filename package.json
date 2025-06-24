@@ -28,16 +28,16 @@
     "server",
     "model-context-protocol"
   ],
-  "author": "Your Name or Org <your.email@example.com>",
-  "license": "SEE LICENSE IN LICENSE",
+  "author": "José Cordeiro <joseantcordeiro@gmail.com>",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/fhir-mcp-server.git"
+    "url": "git+https://github.com/smedrec/fhir-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/fhir-mcp-server/issues"
+    "url": "https://github.com/smedrec/fhir-mcp-server/issues"
   },
-  "homepage": "https://github.com/your-username/fhir-mcp-server#readme",
+  "homepage": "https://github.com/smedrec/fhir-mcp-server#readme",
   "publishConfig": {
     "access": "public"
   },
