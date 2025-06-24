@@ -5,15 +5,49 @@ import {
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { fhirResourceTools } from "./tools/fhir-tools.js";
+import { Implementation } from "@modelcontextprotocol/sdk/types.js";
+//import { getResourceByType } from "../lib/get-resource-by-type.js";
 
 class FHIRMCPServer {
   private server: McpServer;
+  private SERVER_INFO: Implementation = { name: "FHIR RESOURCES MCP", version: "0.1.0" }
 
   constructor() {
-    this.server = new McpServer({
-      name: "fhir-mcp-server",
-      version: "0.1.0",
-    });
+    this.server = new McpServer(this.SERVER_INFO);
+
+    // Example resource
+    /**this.server.registerResource(
+      "fhir-resource-definition",
+      new ResourceTemplate("fhir://{resourceType}/definition", {
+        list: undefined,
+        complete: {
+          // Provide intelligent completions based on previously resolved parameters
+          definition: async (value, context) => {
+            const resourceType = context?.arguments?.["resourceType"];
+            if (typeof resourceType !== "string") {
+              throw new Error("resourceType argument is required and must be a string");
+            }
+            return JSON.stringify(await getResourceByType(resourceType), null, 2);
+          }
+        }
+      }),
+      {
+        title: "FHIR Resource Definitions",
+        description: "Returns the json representation of the resource on the fhir server"
+      },
+      async (uri: URL, { definition: string }) => {
+        // Safely extract arguments from extra if present
+        //const args = extra?.arguments as Record<string, unknown> | undefined;
+        //const definition = args?.definition;
+        return {
+          content: [{
+            uri: uri.href,
+            text: JSON.stringify(definition, null, 2),
+            mimeType: "text/plain"
+          }]
+        };
+      }
+    );*/
 
     this.setupToolHandlers();
 
@@ -54,9 +88,6 @@ class FHIRMCPServer {
         }
       );
     });
-
-    // Example resource removed
-    // this.server.registerResource(...)
   }
 
   async run() {
