@@ -1,5 +1,5 @@
 import { logAuditEvent } from "../../lib/audit.js";
-//import axios from 'axios';
+import axios from 'axios';
 import { fhirServerBaseUrl } from '../../config.js';
 import z from "zod";
 //import { createSmartFhirClient } from "../../lib/client.js";
