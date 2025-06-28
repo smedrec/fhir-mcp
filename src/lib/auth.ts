@@ -13,6 +13,13 @@ interface TokenResponse {
   scope?: string;
 }
 
+// Generate a key pair
+const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+  publicKeyEncoding: { type: "spki", format: "pem" },
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+})
+
 /**
  * Authorizes the app and resolves the promise with the access token response
  * @returns {Promise<Object>}
@@ -37,7 +44,7 @@ export async function authorize(): Promise<TokenResponse> {
     client_assertion: jwt.sign(
       jwtToken,
       base64url.decode(config.smartPrivateKey),
-      { algorithm: "ES384" }
+      { algorithm: "RS256" }
     ),
   };
 
