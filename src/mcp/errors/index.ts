@@ -2,7 +2,7 @@
  * Error Handling Module
  * 
  * This module provides custom error classes and error handling utilities
- * for the n8n MCP Server.
+ * for the FHIR MCP Server.
  */
 
 import { McpError as SdkMcpError } from '@modelcontextprotocol/sdk/types.js';
