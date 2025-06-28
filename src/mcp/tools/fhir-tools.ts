@@ -1,7 +1,9 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { logAuditEvent } from "../../lib/audit.js";
-import axios from 'axios';
-import { fhirServerBaseUrl } from '../../config.js';
+import axios from "axios";
+import { fhirServerBaseUrl } from "../../config.js";
 import z from "zod";
+import { IMcpTool } from "./IMcpTool.js";
 //import { createSmartFhirClient } from "../../lib/client.js";
 //import { authorize } from "../../lib/authorize.js";
 //import { config } from "../../config.js";
@@ -22,360 +24,384 @@ const fhirClient = axios.create({
 const defaultPrincipalId = "anonymous";
 //const defaultRoles = ['anonymous']
 
-export const fhirResourceReadTool = {
-  name: "fhirResourceRead",
-  description: "Reads a FHIR resource by ID.",
-  inputSchema: {
-    resourceType: z
-      .string()
-      .describe(
-        "The FHIR resource type, ex: Patient, Organization, Practitioner"
-      ),
-    id: z.string().describe("The resource ID"),
-  },
-  handler: async (
-    { resourceType, id }: { resourceType: string; id: string },
-    extra: any
-  ) => {
-    const toolName = "fhirResourceRead";
-    const resourceId = id;
-    const principalId = defaultPrincipalId; // Or get from actual session/context
+function createTextResponse(
+  text: string,
+  options: { isError: boolean } = { isError: false }
+): { content: { type: "text"; text: string }[]; isError?: boolean } {
+  return {
+    content: [{ type: "text", text }],
+    isError: options.isError,
+  };
+}
 
-    try {
-      // Log the attempt
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        resourceId,
-        outcome: "success", // Assuming success until an error occurs
-        //details: { params }
-      });
+class fhirResourceReadTool implements IMcpTool {
+  registerTool(server: McpServer) {
+    server.tool(
+      "fhir_resource_read",
+      "Reads a FHIR resource by ID.",
+      {
+        resourceType: z
+          .string()
+          .optional()
+          .describe(
+            "The FHIR resource type, ex: Patient, Organization, Practitioner, etc."
+          ),
+        id: z.string().optional().describe("The resource ID"),
+      },
+      async ({ resourceType, id }, extra) => {
+        const toolName = "fhir_resource_read";
+        const resourceId = id;
+        const principalId = defaultPrincipalId; // Or get from actual session/context
 
-      const response = await fhirClient.get(`/${resourceType}/${resourceId}`);
+        try {
+          // Log the attempt
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            resourceId,
+            outcome: "success", // Assuming success until an error occurs
+            //details: { params }
+          });
 
-      // Log successful outcome
-      // logAuditEvent - already logged attempt, could update with outcome or log separately
+          const response = await fhirClient.get(
+            `/${resourceType}/${resourceId}`
+          );
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(response.data, null, 2),
-          },
-        ],
-      };
-    } catch (error: any) {
-      console.error(
-        `[${toolName}] Error reading ${resourceType}/${resourceId}:`,
-        error.response?.data || error.message
-      );
-      // Log failure outcome
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        resourceId,
-        outcome: "failure",
-        details: { error: error.response?.data || error.message },
-      });
-      // Propagate the error or return a structured error response
-      throw new Error(
-        `Failed to read FHIR resource ${resourceType}/${resourceId}: ${error.message}`
-      );
-    }
-  },
-};
+          // Log successful outcome
+          // logAuditEvent - already logged attempt, could update with outcome or log separately
 
-export const fhirResourceSearchTool = {
-  name: "fhirResourceSearch",
-  description: "Search FHIR resources by fhir standard parameters.",
-  inputSchema: {
-    resourceType: z
-      .string()
-      .describe(
-        "The FHIR resource type, ex: Patient, Organization, Practitioner"
-      ),
-    searchParams: z
-      .record(z.string())
-      .describe(
-        'A record of search parameters, e.g., {"name": "John Doe", "_count": "10"}'
-      ),
-  },
-  handler: async (
-    {
-      resourceType,
-      searchParams,
-    }: { resourceType: string; searchParams: Record<string, string> },
-    extra: any
-  ) => {
-    const toolName = "fhirResourceSearch"; // Corrected tool name
-    const principalId = defaultPrincipalId; // Or get from actual session/context
-
-    try {
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        outcome: "success", // Assuming success
-        details: { searchParams },
-      });
-
-      const response = await fhirClient.get(`/${resourceType}`, {
-        params: searchParams,
-      });
-      return {
-        content: [
-          { type: "text", text: JSON.stringify(response.data, null, 2) },
-        ],
-      };
-    } catch (error: any) {
-      console.error(
-        `[${toolName}] Error searching ${resourceType} with params ${JSON.stringify(searchParams)}:`,
-        error.response?.data || error.message
-      );
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        outcome: "failure",
-        details: { searchParams, error: error.response?.data || error.message },
-      });
-      throw new Error(
-        `Failed to search FHIR resources ${resourceType}: ${error.message}`
-      );
-    }
-  },
-};
-
-export const fhirResourceCreateTool = {
-  name: "fhirResourceCreate",
-  description: "Create FHIR resources.",
-  inputSchema: {
-    resourceType: z
-      .string()
-      .describe(
-        "The FHIR resource type, ex: Patient, Organization, Practitioner"
-      ),
-    resource: z.unknown(),
-  },
-  handler: async (
-    { resourceType, resource }: { resourceType: string; resource: any },
-    extra: any
-  ) => {
-    const toolName = "fhirResourceCreate";
-    const principalId = defaultPrincipalId;
-
-    if (resource.resourceType && resource.resourceType !== resourceType) {
-      throw new Error(
-        `Payload resourceType (${resource.resourceType}) does not match path resourceType (${resourceType})`
-      );
-    }
-    // Ensure the resource being created has the correct resourceType if not already set
-    if (!resource.resourceType) {
-      resource.resourceType = resourceType;
-    }
-
-    try {
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        outcome: "success", // Assuming success
-        //details: { resourceType, resource } // Be cautious about logging entire resource if sensitive
-      });
-
-      const response = await fhirClient.post(`/${resourceType}`, resource);
-      // Return the created resource, often includes server-assigned ID and metadata
-      return {
-        content: [
-          { type: "text", text: JSON.stringify(response.data, null, 2) },
-        ],
-      };
-    } catch (error: any) {
-      console.error(
-        `[${toolName}] Error creating ${resourceType}:`,
-        error.response?.data || error.message
-      );
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        outcome: "failure",
-        details: { resourceType, error: error.response?.data || error.message },
-      });
-      throw new Error(
-        `Failed to create FHIR resource ${resourceType}: ${error.message}`
-      );
-    }
-  },
-};
-
-export const fhirResourceUpdateTool = {
-  name: "fhirResourceUpdate",
-  description: "Update FHIR resources.",
-  inputSchema: {
-    resourceType: z
-      .string()
-      .describe(
-        "The FHIR resource type, ex: Patient, Organization, Practitioner"
-      ),
-    id: z.string().describe("The ID of the resource to update"),
-    resource: z
-      .unknown()
-      .describe(
-        "The FHIR resource content to update. Must contain an `id` matching the URL."
-      ),
-  },
-  handler: async (
-    {
-      resourceType,
-      id,
-      resource,
-    }: { resourceType: string; id: string; resource: any },
-    extra: any
-  ) => {
-    const toolName = "fhirResourceUpdate";
-    const principalId = defaultPrincipalId;
-
-    if (!resource.id) {
-      throw new Error(
-        `Resource payload for update must include an 'id' field.`
-      );
-    }
-    if (resource.id !== id) {
-      throw new Error(
-        `Resource payload ID (${resource.id}) does not match ID in path (${id}).`
-      );
-    }
-    if (resource.resourceType && resource.resourceType !== resourceType) {
-      throw new Error(
-        `Payload resourceType (${resource.resourceType}) does not match path resourceType (${resourceType})`
-      );
-    }
-    // Ensure the resource being updated has the correct resourceType if not already set
-    if (!resource.resourceType) {
-      resource.resourceType = resourceType;
-    }
-
-    try {
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        resourceId: id,
-        outcome: "success", // Assuming success
-        details: { resourceType, id, resource }, // Be cautious about logging entire resource
-      });
-
-      const response = await fhirClient.put(`/${resourceType}/${id}`, resource);
-      // Return the updated resource, often includes server-assigned version ID and metadata
-      return {
-        content: [
-          { type: "text", text: JSON.stringify(response.data, null, 2) },
-        ],
-      };
-    } catch (error: any) {
-      console.error(
-        `[${toolName}] Error updating ${resourceType}/${id}:`,
-        error.response?.data || error.message
-      );
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        resourceId: id,
-        outcome: "failure",
-        details: {
-          resourceType,
-          id,
-          error: error.response?.data || error.message,
-        },
-      });
-      throw new Error(
-        `Failed to update FHIR resource ${resourceType}/${id}: ${error.message}`
-      );
-    }
-  },
-};
-
-export const fhirResourceDeleteTool = {
-  name: "fhirResourceDelete",
-  description: "Delete FHIR resources.",
-  inputSchema: {
-    resourceType: z
-      .string()
-      .describe(
-        "The FHIR resource type, ex: Patient, Organization, Practitioner"
-      ),
-    id: z.string().describe("The resource ID"),
-  },
-  handler: async (
-    { resourceType, id }: { resourceType: string; id: string },
-    extra: any
-  ) => {
-    const toolName = "fhirResourceDelete";
-    const principalId = defaultPrincipalId;
-
-    try {
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        resourceId: id,
-        outcome: "success", // Assuming success
-        details: { resourceType, id },
-      });
-
-      const response = await fhirClient.delete(`/${resourceType}/${id}`);
-      // Typically returns OperationOutcome or status code 204 (No Content)
-      // For simplicity, we can return the status or a success message.
-      // response.data might be an OperationOutcome
-      // Return structure should be consistent with other tools
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
+          return {
+            content: [
               {
-                status: response.status,
-                statusText: response.statusText,
-                data: response.data, // Could be an OperationOutcome
+                type: "text",
+                text: JSON.stringify(response.data, null, 2),
               },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    } catch (error: any) {
-      console.error(
-        `[${toolName}] Error deleting ${resourceType}/${id}:`,
-        error.response?.data || error.message
-      );
-      logAuditEvent({
-        principalId,
-        action: toolName,
-        resourceType,
-        resourceId: id,
-        outcome: "failure",
-        details: {
-          resourceType,
-          id,
-          error: error.response?.data || error.message,
-        },
-      });
-      throw new Error(
-        `Failed to delete FHIR resource ${resourceType}/${id}: ${error.message}`
-      );
-    }
-  },
-};
+            ],
+          };
+        } catch (error: any) {
+          console.error(
+            `[${toolName}] Error reading ${resourceType}/${resourceId}:`,
+            error.response?.data || error.message
+          );
+          // Log failure outcome
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            resourceId,
+            outcome: "failure",
+            details: { error: error.response?.data || error.message },
+          });
+          // Propagate the error or return a structured error response
+          return createTextResponse(
+            `[${toolName}] Error reading ${resourceType}/${resourceId}:`,
+            { isError: true }
+          );
+        }
+      }
+    );
+  }
+}
 
-export const fhirResourceTools = [
-  fhirResourceReadTool,
-  fhirResourceSearchTool,
-  fhirResourceCreateTool,
-  fhirResourceUpdateTool,
-  fhirResourceDeleteTool,
-];
+export const fhirResourceReadToolInstance = new fhirResourceReadTool();
+
+class fhirResourceSearchTool implements IMcpTool {
+  registerTool(server: McpServer) {
+    server.tool(
+      "fhir_resource_search",
+      "Search FHIR resources by fhir standard parameters.",
+      {
+        resourceType: z
+          .string()
+          .optional()
+          .describe(
+            "The FHIR resource type, ex: Patient, Organization, Practitioner, etc."
+          ),
+        searchParams: z
+          .record(z.string())
+          .describe(
+            'A record of search parameters, e.g., {"name": "John Doe", "_count": "10"}'
+          ),
+      },
+      async ({ resourceType, searchParams }, extra) => {
+        const toolName = "fhirResourceSearch"; // Corrected tool name
+        const principalId = defaultPrincipalId; // Or get from actual session/context
+
+        try {
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            outcome: "success", // Assuming success
+            details: { searchParams },
+          });
+
+          const response = await fhirClient.get(`/${resourceType}`, {
+            params: searchParams,
+          });
+          return {
+            content: [
+              { type: "text", text: JSON.stringify(response.data, null, 2) },
+            ],
+          };
+        } catch (error: any) {
+          console.error(
+            `[${toolName}] Error searching ${resourceType} with params ${JSON.stringify(searchParams)}:`,
+            error.response?.data || error.message
+          );
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            outcome: "failure",
+            details: {
+              searchParams,
+              error: error.response?.data || error.message,
+            },
+          });
+          return createTextResponse(
+            `Failed to search FHIR resources ${resourceType}: ${error.message}`,
+            { isError: true }
+          );
+        }
+      }
+    );
+  }
+}
+
+export const fhirResourceSearchToolInstance = new fhirResourceSearchTool();
+
+class fhirResourceCreateTool implements IMcpTool {
+  registerTool(server: McpServer) {
+    server.tool(
+      "fhir_resource_create",
+      "Create FHIR resources.",
+      {
+        resourceType: z
+          .string()
+          .describe(
+            "The FHIR resource type, ex: Patient, Organization, Practitioner, etc."
+          ),
+        resource: z.unknown(),
+      },
+      async ({ resourceType, resource }, extra) => {
+        const toolName = "fhir_resource_create";
+        const principalId = defaultPrincipalId;
+
+        /**if (resource.resourceType && resource.resourceType !== resourceType) {
+          throw new Error(
+            `Payload resourceType (${resource.resourceType}) does not match path resourceType (${resourceType})`
+          );
+        }
+        // Ensure the resource being created has the correct resourceType if not already set
+        if (!resource.resourceType) {
+          resource.resourceType = resourceType;
+        }*/
+
+        try {
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            outcome: "success", // Assuming success
+            //details: { resourceType, resource } // Be cautious about logging entire resource if sensitive
+          });
+
+          const response = await fhirClient.post(`/${resourceType}`, resource);
+          // Return the created resource, often includes server-assigned ID and metadata
+          return {
+            content: [
+              { type: "text", text: JSON.stringify(response.data, null, 2) },
+            ],
+          };
+        } catch (error: any) {
+          console.error(
+            `[${toolName}] Error creating ${resourceType}:`,
+            error.response?.data || error.message
+          );
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            outcome: "failure",
+            details: {
+              resourceType,
+              error: error.response?.data || error.message,
+            },
+          });
+          return createTextResponse(
+            `Failed to create FHIR resource ${resourceType}: ${error.message}`,
+            { isError: true }
+          );
+        }
+      }
+    );
+  }
+}
+
+export const fhirResourceCreateToolInstance = new fhirResourceCreateTool();
+
+class fhirResourceUpdateTool implements IMcpTool {
+  registerTool(server: McpServer) {
+    server.tool(
+      "fhir_resource_update",
+      "Update FHIR resources.",
+      {
+        resourceType: z
+          .string()
+          .describe(
+            "The FHIR resource type, ex: Patient, Organization, Practitioner, etc."
+          ),
+        id: z.string().describe("The ID of the resource to update"),
+        resource: z.unknown(),
+      },
+      async ({ resourceType, id, resource }, extra) => {
+        const toolName = "fhir_resource_update";
+        const principalId = defaultPrincipalId;
+
+        /**if (!resource.id) {
+          throw new Error(
+            `Resource payload for update must include an 'id' field.`
+          );
+        }
+        if (resource.id !== id) {
+          throw new Error(
+            `Resource payload ID (${resource.id}) does not match ID in path (${id}).`
+          );
+        }
+        if (resource.resourceType && resource.resourceType !== resourceType) {
+          throw new Error(
+            `Payload resourceType (${resource.resourceType}) does not match path resourceType (${resourceType})`
+          );
+        }
+        // Ensure the resource being updated has the correct resourceType if not already set
+        if (!resource.resourceType) {
+          resource.resourceType = resourceType;
+        }*/
+
+        try {
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            resourceId: id,
+            outcome: "success", // Assuming success
+            details: { resourceType, id, resource }, // Be cautious about logging entire resource
+          });
+
+          const response = await fhirClient.put(
+            `/${resourceType}/${id}`,
+            resource
+          );
+          // Return the updated resource, often includes server-assigned version ID and metadata
+          return {
+            content: [
+              { type: "text", text: JSON.stringify(response.data, null, 2) },
+            ],
+          };
+        } catch (error: any) {
+          console.error(
+            `[${toolName}] Error updating ${resourceType}/${id}:`,
+            error.response?.data || error.message
+          );
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            resourceId: id,
+            outcome: "failure",
+            details: {
+              resourceType,
+              id,
+              error: error.response?.data || error.message,
+            },
+          });
+          return createTextResponse(
+            `Failed to update FHIR resource ${resourceType}/${id}: ${error.message}`,
+            { isError: true }
+          );
+        }
+      }
+    );
+  }
+}
+
+export const fhirResourceUpdateToolInstance = new fhirResourceUpdateTool();
+
+class fhirResourceDeleteTool implements IMcpTool {
+  registerTool(server: McpServer) {
+    server.tool(
+      "fhir_resource_delete",
+      "Delete FHIR resources.",
+      {
+        resourceType: z
+          .string()
+          .describe(
+            "The FHIR resource type, ex: Patient, Organization, Practitioner, etc."
+          ),
+        id: z.string().describe("The ID of the resource to update"),
+      },
+      async ({ resourceType, id }, extra) => {
+        const toolName = "fhir_resource_delete";
+        const principalId = defaultPrincipalId;
+
+        try {
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            resourceId: id,
+            outcome: "success", // Assuming success
+            details: { resourceType, id },
+          });
+
+          const response = await fhirClient.delete(`/${resourceType}/${id}`);
+          // Typically returns OperationOutcome or status code 204 (No Content)
+          // For simplicity, we can return the status or a success message.
+          // response.data might be an OperationOutcome
+          // Return structure should be consistent with other tools
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: response.data, // Could be an OperationOutcome
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error(
+            `[${toolName}] Error deleting ${resourceType}/${id}:`,
+            error.response?.data || error.message
+          );
+          logAuditEvent({
+            principalId,
+            action: toolName,
+            resourceType,
+            resourceId: id,
+            outcome: "failure",
+            details: {
+              resourceType,
+              id,
+              error: error.response?.data || error.message,
+            },
+          });
+          return createTextResponse(
+            `Failed to delete FHIR resource ${resourceType}/${id}: ${error.message}`,
+            { isError: true }
+          );
+        }
+      }
+    );
+  }
+}
+
+export const fhirResourceDeleteToolInstance = new fhirResourceDeleteTool();
