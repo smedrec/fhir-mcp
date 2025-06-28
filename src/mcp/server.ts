@@ -6,7 +6,7 @@ import * as tools from "./tools/index.js";
 
 const SERVER_INFO: Implementation = {
   name: "FHIR RESOURCES MCP",
-  version: "0.1.0",
+  version: "0.2.0",
 };
 
 export const fhirMcpServer = new McpServer(SERVER_INFO);

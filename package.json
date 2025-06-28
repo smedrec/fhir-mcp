@@ -1,6 +1,6 @@
 {
   "name": "fhir-mcp-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP Server for securely accessing FHIR-compatible health data",
   "type": "module",
   "main": "build/index.js",
