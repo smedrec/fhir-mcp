@@ -3,9 +3,8 @@ import { logAuditEvent } from "../../lib/audit.js";
 import axios from "axios";
 import z from "zod";
 import { IMcpTool } from "./IMcpTool.js";
-import { getEnvConfig } from "../environment.js"; // Added
-//import { createSmartFhirClient } from "../../lib/client.js";
-//import { authorize } from "../../lib/authorize.js";
+import { getEnvConfig } from "../environment.js";
+import { authorize } from "../../lib/auth.js";
 
 // Create an axios instance for FHIR requests
 const fhirClient = axios.create({
@@ -22,7 +21,7 @@ const defaultPrincipalId = "anonymous";
 // Function to get the base URL for FHIR requests
 function getFhirBaseUrl() {
   const env = getEnvConfig();
-  return env.fhirBaseUrl || env.smartIss;
+  return env.smartIss || env.fhirBaseUrl;
 }
 
 // Update baseURL before each request, as it might depend on runtime config
@@ -60,7 +59,8 @@ class fhirResourceReadTool implements IMcpTool {
         const toolName = "fhir_resource_read";
         const resourceId = id;
         const principalId = extra?.principal?.id || defaultPrincipalId;
-        const accessToken = extra?.req?.cookies?.access_token;
+        const token = await authorize();
+        const accessToken = token.access_token;
 
         if (!accessToken) {
           return createTextResponse("Unauthorized: Missing access token.", {
@@ -143,9 +143,10 @@ class fhirResourceSearchTool implements IMcpTool {
           ),
       },
       async ({ resourceType, searchParams }, extra) => {
-        const toolName = "fhirResourceSearch"; // Corrected tool name
+        const toolName = "fhir_resource_search";
         const principalId = extra?.principal?.id || defaultPrincipalId;
-        const accessToken = extra?.req?.cookies?.access_token;
+        const token = await authorize();
+        const accessToken = token.access_token;
 
         if (!accessToken) {
           return createTextResponse("Unauthorized: Missing access token.", {
@@ -214,7 +215,8 @@ class fhirResourceCreateTool implements IMcpTool {
       async ({ resourceType, resource }, extra) => {
         const toolName = "fhir_resource_create";
         const principalId = extra?.principal?.id || defaultPrincipalId;
-        const accessToken = extra?.req?.cookies?.access_token;
+        const token = await authorize();
+        const accessToken = token.access_token;
 
         if (!accessToken) {
           return createTextResponse("Unauthorized: Missing access token.", {
@@ -298,7 +300,8 @@ class fhirResourceUpdateTool implements IMcpTool {
       async ({ resourceType, id, resource }, extra) => {
         const toolName = "fhir_resource_update";
         const principalId = extra?.principal?.id || defaultPrincipalId;
-        const accessToken = extra?.req?.cookies?.access_token;
+        const token = await authorize();
+        const accessToken = token.access_token;
 
         if (!accessToken) {
           return createTextResponse("Unauthorized: Missing access token.", {
@@ -394,7 +397,8 @@ class fhirResourceDeleteTool implements IMcpTool {
       async ({ resourceType, id }, extra) => {
         const toolName = "fhir_resource_delete";
         const principalId = extra?.principal?.id || defaultPrincipalId;
-        const accessToken = extra?.req?.cookies?.access_token;
+        const token = await authorize();
+        const accessToken = token.access_token;
 
         if (!accessToken) {
           return createTextResponse("Unauthorized: Missing access token.", {

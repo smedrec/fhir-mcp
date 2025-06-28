@@ -13,20 +13,22 @@ import { ErrorCode } from './errors/error-codes.js';
 
 // Environment variable names
 export const ENV_VARS = {
+  SMART_PRIVATE_KEY: 'SMART_PRIVATE_KEY',
   SMART_CLIENT_ID: 'SMART_CLIENT_ID',
   SMART_SCOPE: 'SMART_SCOPE',
   SMART_ISS: 'SMART_ISS',
-  SMART_REDIRECT_URI: 'SMART_REDIRECT_URI', // Added
+  SMART_TOKEN_URI: 'SMART_TOKEN_URI',
   FHIR_BASE_URL: 'FHIR_BASE_URL', // Fallback for ISS
   DEBUG: 'DEBUG',
 };
 
 // Interface for validated environment variables
 export interface EnvConfig {
+  smartPrivateKey: string;
   smartClientId: string;
   smartScope: string;
   smartIss: string;
-  smartRedirectUri: string; // Added
+  smartTokenUri: string;
   fhirBaseUrl?: string; // Made optional
   debug: boolean;
 }
@@ -36,17 +38,19 @@ export interface EnvConfig {
  */
 export function loadEnvironmentVariables(): void {
   const {
+    SMART_PRIVATE_KEY,
     SMART_CLIENT_ID,
     SMART_SCOPE,
     SMART_ISS,
-    SMART_REDIRECT_URI, // Added
+    SMART_TOKEN_URI,
   } = process.env;
 
   if (
+    !SMART_PRIVATE_KEY &&
     !SMART_CLIENT_ID &&
     !SMART_SCOPE &&
     !SMART_ISS &&
-    !SMART_REDIRECT_URI // Added
+    !SMART_TOKEN_URI
   ) {
     const projectRoot = findConfig('package.json');
     if (projectRoot) {
@@ -63,12 +67,21 @@ export function loadEnvironmentVariables(): void {
  * @throws {McpError} If required environment variables are missing
  */
 export function getEnvConfig(): EnvConfig {
+  const smartPrivateKey = process.env[ENV_VARS.SMART_PRIVATE_KEY];
   const smartClientId = process.env[ENV_VARS.SMART_CLIENT_ID];
   const smartScope = process.env[ENV_VARS.SMART_SCOPE];
   const smartIss = process.env[ENV_VARS.SMART_ISS];
-  const smartRedirectUri = process.env[ENV_VARS.SMART_REDIRECT_URI]; // Added
+  const smartTokenUri = process.env[ENV_VARS.SMART_TOKEN_URI];
   const fhirBaseUrl = process.env[ENV_VARS.FHIR_BASE_URL];
   const debug = process.env[ENV_VARS.DEBUG]?.toLowerCase() === 'true';
+
+  // Validate required core environment variables
+  if (!smartPrivateKey) {
+    throw new McpError(
+      ErrorCode.InitializationError,
+      `${ENV_VARS.SMART_PRIVATE_KEY} environment variable not set. ${ENV_VARS.SMART_PRIVATE_KEY} is required.`
+    );
+  }
 
   // Validate required core environment variables
   if (!smartClientId) {
@@ -92,12 +105,12 @@ export function getEnvConfig(): EnvConfig {
     );
   }
 
-  if (!smartRedirectUri) { // Added
-    throw new McpError( // Added
-      ErrorCode.InitializationError, // Added
-      `${ENV_VARS.SMART_REDIRECT_URI} environment variable not set. ${ENV_VARS.SMART_REDIRECT_URI} is required.` // Added
-    ); // Added
-  } // Added
+  if (!smartTokenUri) {
+    throw new McpError(
+      ErrorCode.InitializationError,
+      `${ENV_VARS.SMART_TOKEN_URI} environment variable not set. ${ENV_VARS.SMART_TOKEN_URI} is required.`
+    );
+  }
 
   // FHIR_BASE_URL optional at startup.
   // Tools requiring them should perform checks at the point of use.
@@ -112,20 +125,21 @@ export function getEnvConfig(): EnvConfig {
     );
   }
 
-  try { // Added
-    new URL(smartRedirectUri); // Added
-  } catch (error) { // Added
-    throw new McpError( // Added
-      ErrorCode.InitializationError, // Added
-      `Invalid URL format for ${ENV_VARS.SMART_REDIRECT_URI}: ${smartRedirectUri}` // Added
-    ); // Added
-  } // Added
+  try {
+    new URL(smartTokenUri);
+  } catch (error) {
+    throw new McpError(
+      ErrorCode.InitializationError,
+      `Invalid URL format for ${ENV_VARS.SMART_TOKEN_URI}: ${smartTokenUri}`
+    );
+  }
 
   return {
+    smartPrivateKey,
     smartClientId,
     smartScope,
     smartIss,
-    smartRedirectUri, // Added
+    smartTokenUri,
     fhirBaseUrl: fhirBaseUrl || undefined, // Ensure undefined if empty
     debug,
   };
