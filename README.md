@@ -142,7 +142,7 @@ Once connected to the server (e.g., via MCP Inspector), the following tools will
   - `src/mcp/server.ts`: MCP server setup and tool registration.
   - `src/mcp/tools/fhir-tools.ts`: Implementation of FHIR interaction tools.
   - `src/lib/audit.ts`: Basic audit logging.
-  - `src/config.ts`: Configuration for FHIR base URL.
+  - `src/mcp/environment.ts`: Configuration for FHIR base URL.
 - **Building**: `npm run build`
 - **Linting/Formatting**: ESLint/Prettier for code consistency.
 

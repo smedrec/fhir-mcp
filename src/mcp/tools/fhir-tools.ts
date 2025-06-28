@@ -1,16 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { logAuditEvent } from "../../lib/audit.js";
 import axios from "axios";
-import { fhirServerBaseUrl } from "../../config.js";
 import z from "zod";
 import { IMcpTool } from "./IMcpTool.js";
 //import { createSmartFhirClient } from "../../lib/client.js";
 //import { authorize } from "../../lib/authorize.js";
-//import { config } from "../../config.js";
 
 // Create an axios instance for FHIR requests
 const fhirClient = axios.create({
-  baseURL: fhirServerBaseUrl,
+  baseURL: 'https://teachhowtofish.org/fhir',
   headers: {
     "Content-Type": "application/fhir+json",
     Accept: "application/fhir+json",
