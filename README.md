@@ -44,12 +44,36 @@ A Model Context Protocol (MCP) server designed to securely access, retrieve, and
 
 The server is configured using environment variables:
 
-- `FHIR_SERVER_BASE_URL`: The base URL of the FHIR server.
-  - Defaults to `http://hapi.fhir.org/baseR4` if not set.
-  - Example: `export FHIR_SERVER_BASE_URL="https://your-fhir-server.com/fhir"`
-- `FHIR_ACCESS_TOKEN` (Optional): If your FHIR server requires Bearer token authentication.
-  - You will need to uncomment and potentially adjust the Authorization header logic in `src/mcp/tools/fhir-tools.ts` to use this token.
-  - Example: `export FHIR_ACCESS_TOKEN="your_very_secure_token"`
+- **`SMART_CLIENT_ID`**: (Required) The OAuth 2.0 Client ID for your SMART on FHIR application.
+  - Example: `export SMART_CLIENT_ID="your_client_id"`
+- **`SMART_SCOPE`**: (Required) The OAuth 2.0 scopes your application requires.
+  - Example: `export SMART_SCOPE="patient/*.read launch openid fhirUser"`
+- **`SMART_ISS`**: (Required) The Issuer URL of the FHIR authorization server. This is often the base URL of the FHIR server. Must be HTTPS.
+  - Example: `export SMART_ISS="https://your-fhir-server.com/fhir"`
+- **`SMART_REDIRECT_URI`**: (Required) The callback URL for your application, registered with the FHIR authorization server. This MCP server will listen on this URI at the `/callback` path.
+  - Example: `export SMART_REDIRECT_URI="http://localhost:3000/callback"` (Note: For production, this MUST be HTTPS)
+- **`FHIR_BASE_URL`** (Optional): If the FHIR API base URL is different from the `SMART_ISS` URL. If not provided, `SMART_ISS` will be used as the base for FHIR API calls.
+  - Example: `export FHIR_BASE_URL="https://api.your-fhir-server.com/fhir/R4"`
+- **`DEBUG`**: (Optional) Set to `true` to enable debug logging.
+  - Example: `export DEBUG="true"`
+
+## Authentication Flow (SMART on FHIR)
+
+This server implements the SMART App Launch Framework using OAuth 2.0 Authorization Code Grant with PKCE.
+
+1.  **Initiate Launch (Standalone or EHR Launch)**:
+    *   **Standalone Launch**: Navigate your browser to the `/authorize` endpoint of this MCP server (e.g., `http://localhost:3000/authorize`).
+    *   **EHR Launch**: The EHR will redirect the user's browser to the `/init` endpoint of this MCP server (e.g., `http://localhost:3000/init?iss=<issuer_url>&launch=<launch_token>`).
+2.  **Authorization**: The MCP server will redirect the user to the FHIR server's authorization page. The user authenticates and grants access.
+3.  **Callback**: The FHIR server redirects the user back to the `SMART_REDIRECT_URI` (e.g., `http://localhost:3000/callback`) handled by this MCP server.
+4.  **Token Exchange**: The MCP server exchanges the authorization code for an access token.
+5.  **Session**: The access token is stored in a secure, HttpOnly cookie. Subsequent calls to the FHIR tools by the MCP client (e.g., MCP Inspector) will use this token.
+
+The server exposes the following SMART-specific endpoints:
+- `/init`: For EHR-initiated launches.
+- `/authorize`: Initiates the OAuth2 flow (can be used for standalone launch).
+- `/callback`: Handles the OAuth2 redirect from the authorization server.
+- `/ready`: A simple endpoint that returns 200 OK if an active session (access_token cookie) exists, typically used by client applications to check readiness.
 
 ## Usage
 

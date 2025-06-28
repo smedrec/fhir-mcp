@@ -3,24 +3,34 @@ import { logAuditEvent } from "../../lib/audit.js";
 import axios from "axios";
 import z from "zod";
 import { IMcpTool } from "./IMcpTool.js";
+import { getEnvConfig } from "../environment.js"; // Added
 //import { createSmartFhirClient } from "../../lib/client.js";
 //import { authorize } from "../../lib/authorize.js";
 
 // Create an axios instance for FHIR requests
 const fhirClient = axios.create({
-  baseURL: 'https://teachhowtofish.org/fhir',
+  // baseURL will be set dynamically based on envConfig.smartIss or envConfig.fhirBaseUrl
   headers: {
     "Content-Type": "application/fhir+json",
     Accept: "application/fhir+json",
-    //Authorization: `Bearer ${await authorize()}`,
   },
 });
 
-// TODO: This is a placeholder. Real authentication/authorization might be needed.
-// Example: fhirClient.defaults.headers.common['Authorization'] = `Bearer ${process.env.FHIR_ACCESS_TOKEN}`;
-
 const defaultPrincipalId = "anonymous";
 //const defaultRoles = ['anonymous']
+
+// Function to get the base URL for FHIR requests
+function getFhirBaseUrl() {
+  const env = getEnvConfig();
+  return env.fhirBaseUrl || env.smartIss;
+}
+
+// Update baseURL before each request, as it might depend on runtime config
+fhirClient.interceptors.request.use(config => {
+  config.baseURL = getFhirBaseUrl();
+  return config;
+});
+
 
 function createTextResponse(
   text: string,
@@ -49,7 +59,14 @@ class fhirResourceReadTool implements IMcpTool {
       async ({ resourceType, id }, extra) => {
         const toolName = "fhir_resource_read";
         const resourceId = id;
-        const principalId = defaultPrincipalId; // Or get from actual session/context
+        const principalId = extra?.principal?.id || defaultPrincipalId;
+        const accessToken = extra?.req?.cookies?.access_token;
+
+        if (!accessToken) {
+          return createTextResponse("Unauthorized: Missing access token.", {
+            isError: true,
+          });
+        }
 
         try {
           // Log the attempt
@@ -63,7 +80,10 @@ class fhirResourceReadTool implements IMcpTool {
           });
 
           const response = await fhirClient.get(
-            `/${resourceType}/${resourceId}`
+            `/${resourceType}/${resourceId}`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
           );
 
           // Log successful outcome
@@ -124,7 +144,14 @@ class fhirResourceSearchTool implements IMcpTool {
       },
       async ({ resourceType, searchParams }, extra) => {
         const toolName = "fhirResourceSearch"; // Corrected tool name
-        const principalId = defaultPrincipalId; // Or get from actual session/context
+        const principalId = extra?.principal?.id || defaultPrincipalId;
+        const accessToken = extra?.req?.cookies?.access_token;
+
+        if (!accessToken) {
+          return createTextResponse("Unauthorized: Missing access token.", {
+            isError: true,
+          });
+        }
 
         try {
           logAuditEvent({
@@ -137,6 +164,7 @@ class fhirResourceSearchTool implements IMcpTool {
 
           const response = await fhirClient.get(`/${resourceType}`, {
             params: searchParams,
+            headers: { Authorization: `Bearer ${accessToken}` },
           });
           return {
             content: [
@@ -185,7 +213,14 @@ class fhirResourceCreateTool implements IMcpTool {
       },
       async ({ resourceType, resource }, extra) => {
         const toolName = "fhir_resource_create";
-        const principalId = defaultPrincipalId;
+        const principalId = extra?.principal?.id || defaultPrincipalId;
+        const accessToken = extra?.req?.cookies?.access_token;
+
+        if (!accessToken) {
+          return createTextResponse("Unauthorized: Missing access token.", {
+            isError: true,
+          });
+        }
 
         /**if (resource.resourceType && resource.resourceType !== resourceType) {
           throw new Error(
@@ -206,7 +241,13 @@ class fhirResourceCreateTool implements IMcpTool {
             //details: { resourceType, resource } // Be cautious about logging entire resource if sensitive
           });
 
-          const response = await fhirClient.post(`/${resourceType}`, resource);
+          const response = await fhirClient.post(
+            `/${resourceType}`,
+            resource,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
           // Return the created resource, often includes server-assigned ID and metadata
           return {
             content: [
@@ -256,7 +297,14 @@ class fhirResourceUpdateTool implements IMcpTool {
       },
       async ({ resourceType, id, resource }, extra) => {
         const toolName = "fhir_resource_update";
-        const principalId = defaultPrincipalId;
+        const principalId = extra?.principal?.id || defaultPrincipalId;
+        const accessToken = extra?.req?.cookies?.access_token;
+
+        if (!accessToken) {
+          return createTextResponse("Unauthorized: Missing access token.", {
+            isError: true,
+          });
+        }
 
         /**if (!resource.id) {
           throw new Error(
@@ -290,7 +338,10 @@ class fhirResourceUpdateTool implements IMcpTool {
 
           const response = await fhirClient.put(
             `/${resourceType}/${id}`,
-            resource
+            resource,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
           );
           // Return the updated resource, often includes server-assigned version ID and metadata
           return {
@@ -342,7 +393,14 @@ class fhirResourceDeleteTool implements IMcpTool {
       },
       async ({ resourceType, id }, extra) => {
         const toolName = "fhir_resource_delete";
-        const principalId = defaultPrincipalId;
+        const principalId = extra?.principal?.id || defaultPrincipalId;
+        const accessToken = extra?.req?.cookies?.access_token;
+
+        if (!accessToken) {
+          return createTextResponse("Unauthorized: Missing access token.", {
+            isError: true,
+          });
+        }
 
         try {
           logAuditEvent({
@@ -354,7 +412,12 @@ class fhirResourceDeleteTool implements IMcpTool {
             details: { resourceType, id },
           });
 
-          const response = await fhirClient.delete(`/${resourceType}/${id}`);
+          const response = await fhirClient.delete(
+            `/${resourceType}/${id}`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
           // Typically returns OperationOutcome or status code 204 (No Content)
           // For simplicity, we can return the status or a success message.
           // response.data might be an OperationOutcome
