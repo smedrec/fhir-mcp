@@ -2,7 +2,7 @@
  * Environment Configuration
  * 
  * This module handles loading and validating environment variables
- * required for connecting to the n8n API.
+ * required for connecting to the FHIR API.
  */
 
 import dotenv from 'dotenv';
